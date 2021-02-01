@@ -35,7 +35,7 @@ RECAPTCHA_PUBLIC_KEY = 'your public key'
 # RECAPTCHA_PROXY_HOST = 'https://recaptcha.net'
 ```
 
-**如果你的服务器在国内，则还需要修改 django-recaptcha3 的源码：**
+**如果你的服务器在国内，则还需要修改 django-recaptcha2 的源码（参照 django-recaptcha3 ）：**
 
       1. 请先 pip uninstall django-recaptcha3 进行卸载， 然后下载 release 中的源码压缩包。
   
