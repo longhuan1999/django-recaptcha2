@@ -1,23 +1,21 @@
 # Django reCaptcha v2 [![Build Status](https://travis-ci.org/kbytesys/django-recaptcha2.svg?branch=master)](https://travis-ci.org/kbytesys/django-recaptcha2)
 ----
 
-This integration app implements a recaptcha field for <a href="https://developers.google.com/recaptcha/intro">Google reCaptcha v2</a>
-with explicit rendering and multiple recaptcha support. The invisible version of the reCAPTCHA with the automatic render mode
-is now supported, please read the related documentation below.
+这个集成应用在 Django 上为可视化渲染以及支持多种 recaptcha 形式的<a href="https://developers.google.com/recaptcha/intro"> Google reCaptcha v2 </a>实现了 recaptcha 字段。目前已支持reCAPTCHA 隐藏形式在 Django 上的自动渲染，请阅读以下相关文档。
 
-Are you looking for the Google reCaptcha v3? Take a look to the dedicated repository https://github.com/kbytesys/django-recaptcha3
+如果你在寻找 Django 上的 Google reCaptcha v3 项目，可以去看看另一个专门的repository https://github.com/longhuan1999/django-recaptcha3
 
 ----
 
-## How to install
+## 如何安装
 
-Install the required package from pip (or take the source and install it by yourself):
+通过 pip 安装所需的软件包 （或下载源码自行安装）：
 
 ```bash
 pip install django-recaptcha2
 ```
 
-Then add django-recaptcha2 to your installed apps:
+然后将 django-recaptcha2 添加到您 Django 项目配置文件的 installed apps 中：
 
 ```python
 INSTALLED_APPS = (
@@ -27,21 +25,41 @@ INSTALLED_APPS = (
 )
 ```
 
-And add your reCaptcha private and public key to your django settings.py:
+并将您的 reCaptcha 私钥和公钥添加到您 Django 项目的 settings.py 中：
 
 ```python
 RECAPTCHA_PRIVATE_KEY = 'your private key'
 RECAPTCHA_PUBLIC_KEY = 'your public key'
-# If you require reCaptcha to be loaded from somewhere other than https://google.com
-# (e.g. to bypass firewall restrictions), you can specify what proxy to use.
+# 如果您需要从其它地方加载 reCaptcha，而不是 https://google.com
+# （比如：绕过防火墙限制）， 你可以通过以下设置指定要使用的代理，但此设置仅会修改前端加载 reCaptcha 的途径。
 # RECAPTCHA_PROXY_HOST = 'https://recaptcha.net'
 ```
 
-If you have to create the apikey for the domains managed by your django project, you can visit this <a href="https://www.google.com/recaptcha/admin">website</a>.
+**如果你的服务器在国内，则还需要修改 django-recaptcha3 的源码：**
 
-## "I'm not a robot" Usage 
-### Form and Widget
-You can simply create a reCaptcha enabled form with the field provided by this app:
+      1. 请先 pip uninstall django-recaptcha3 进行卸载， 然后下载 release 中的源码压缩包。
+  
+      2. 修改 django-recaptcha3-master\snowpenguin\django\recaptcha3\fields.py#38 :
+  
+```python
+        try:
+            r = requests.post(
+                'https://www.google.com/recaptcha/api/siteverify', // 此处域名改为 www.recaptcha.net
+                {
+                    'secret': self._private_key,
+                    'response': response_token
+                },
+                timeout=5
+            )
+```
+
+      3. 在 django-recaptcha3-master 目录下执行 pip install . 。
+
+如果需要为您的 django 项目所用到的的域名创建 apikey ，则可以访问此<a href="https://www.google.com/recaptcha/admin">网站</a>。
+
+## "I'm not a robot" 的用法 
+### 表单和控件
+您可以使用此应用程序提供的字段便捷地创建一个包含 reCaptcha 的表单：
 
 ```python
 from snowpenguin.django.recaptcha2.fields import ReCaptchaField
@@ -53,8 +71,7 @@ class ExampleForm(forms.Form):
     [...]
 ```
 
-You can set the private key on the "private_key" argument of the field contructor and you can pass some
-parameters into the widget contructor:
+如果您不想用 settings.py 中设置的私钥，可以在字段中添加 "private_key" 参数来指定私钥，并且您可以将一些参数传递到部件构造器中：
 
 ```python
 class ReCaptchaWidget(Widget):
@@ -62,41 +79,34 @@ class ReCaptchaWidget(Widget):
                  callback=None, expired_callback=None, attrs={}, *args, **kwargs):
 ```
 
-If you set the explicit boolean to true, you will render this field with explicit render support. This is useful if you
-want to use multiple forms with reCaptcha in one page. Take a look to template and samples sections for more info.
+如果将 explicit 布尔值设置为 true ，则将在可视化渲染支持下渲染此字段。如果要在同一个页面中使用多个带有 reCaptcha 的表单，这将很有用。查看模板和示例部分可以获取更多信息。
 
-You can personalize reCaptcha theme, type, size, tabindex, callback and expired_callback parameters. Look the reCaptcha
-<a href="https://developers.google.com/recaptcha/docs/display#config">documentation</a> if you want to change those values.
-Warning: the app doesn't validate the incoming parameter values.
+您可以自定义 reCaptcha 的 theme, type, size, tabindex, callback and expired_callback 参数。如果您想修改这些参数可以参考 reCaptcha
+<a href="https://developers.google.com/recaptcha/docs/display#config">文档</a>.
+警告：此应用不会验证传入的参数。
 
 ### Recaptcha "container id"
-Now the default container id for the recaptcha is:
+目前，Recaptcha 的默认容器ID（container id）是：
 
-* recaptcha-{$fieldname} for the automatic rendering
-* recaptcha-{$fieldname}-{%fiverandomdigits} for the explicit rendering
+* recaptcha-{$fieldname} 用于自动渲染
+* recaptcha-{$fieldname}-{%fiverandomdigits} 用于可视化渲染
 
-This avoids name collisions when you use multiple instances of the recaptcha in different forms, but in the same page
-and with the same field name.
+当您在拥有相同字段名且在同一页面的不同表单中使用多个 Recaptcha 实例时，这样可以避免名称冲突。
 
-**Note:** you can always override the container id with the "container_id" argument in the widget constructor, but take
-care: nobody will check if the id you provide is already used.
+**注意：** 您始终可以在部件构造类中使用 "container_id" 参数覆盖 "container id"，但请注意：您需要自己手动检查您提供的ID是否已被使用。
 
-### Templating
-You can use some template tags to simplify the reCaptcha adoption:
+### 模板
+您可以使用一些模板标签来简化 reCaptcha 的使用：
  
-* recaptcha_init: add the script tag for reCaptcha api. You have to put this tag somewhere in your "head" element
-* recaptcha_explicit_init: add the script tag for the reCaptcha api with explicit render support. You have to put this
-  tag somewhere above the end of your "body" element. If you use this tag, you don't have to use "recaptcha_init".
-* recaptcha_explicit_support: this tag add the callback function used by reCaptcha for explicit rendering. This tag also
-  add some funcitions and javascript vars used by the ReCaptchaWidget when it is initialized with explicit=True. You have
-  to put this tag somewhere in your "head" element.
-* recaptcha_key: if you want to use reCaptcha manually in your template, you will need the sitekey (a.k.a. public api key).
-  This tag returns a string with the configured public key.
+* recaptcha_init: 为 reCaptcha api 添加 script 标签。您需要将此标签放在 "head" 元素中的某个位置
+* recaptcha_explicit_init: 为 reCaptcha api 添加支持可视化渲染的 script 标签。您需要将此标签放在 "body" 结束标签之前的某个位置。如果您使用了此标签，则不必再使用 "recaptcha_init"。
+* recaptcha_explicit_support: 此标签添加 reCaptcha 用于可视化渲染的回调函数。此标签还添加了 ReCaptchaWidget 在使用 explicit = True 初始化时需要用到的一些函数和 javascript 变量。您需要将此标签放在 "head" 元素中的某个位置。
+* recaptcha_key: 如果要在您的 HTML 模板中手动使用 reCaptcha 而不通过 forms ，则需要 sitekey（又名 public api key）。此标签将返回带有配置文件中公钥的字符串。
   
-You can use the form as usual.
+您可以照常使用该表单。
 
-### Force widget language
-You can disable the language auto-detection in the recaptha2 init tag:
+### 强制设置构件的文本语音
+您可以在recaptha2 init 标签中禁用自动检测语言即指定文字语言：
 
 ```django
 {% load recaptcha2 %}
@@ -115,12 +125,12 @@ or
 </html>
 ```
 
-For language codes take a look to <a href="https://developers.google.com/recaptcha/docs/language">this page</a>.
+可在<a href="https://developers.google.com/recaptcha/docs/language">此页面</a>查询语言代码。
 
-### Samples
-#### Simple render example
+### 示例
+#### 简单渲染的示例
 
-Just create a form with the reCaptcha field and follow this template example:
+只需创建一个带有 reCaptcha 字段的表单，然后遵循以下模板示例：
 
 ```django
 {% load recaptcha2 %}
@@ -138,9 +148,9 @@ Just create a form with the reCaptcha field and follow this template example:
 </html>
 ```
 
-#### Explicit render example
+#### 可视化渲染的示例
 
-Create a form with explicit=True and write your template like this:
+创建一个带有 explicit = True 属性的表单，并像这样编写模板：
 
 ```django
 {% load recaptcha2 %}
@@ -159,9 +169,9 @@ Create a form with explicit=True and write your template like this:
 </html>
 ```
 
-#### Multiple render example
+#### 渲染多个的示例
 
-You can render multiple reCaptcha using only forms with explicit=True:
+您可以使用仅带有 explicit = True 属性的表单渲染多个 reCaptcha ：
 
 ```django
 {% load recaptcha2 %}
@@ -185,9 +195,9 @@ You can render multiple reCaptcha using only forms with explicit=True:
 </html>
 ```
 
-#### Mix manual render with app support
+#### 应用支持的混合手动渲染
 
-You can use the app explicit render support also is you implement reCaptcha in one of your form in the template:
+您同样可以使用此应用的可视化渲染支持在你模板的其中一个表单中实现 reCaptcha ：
 
 ```django
 {% load recaptcha2 %}
@@ -212,12 +222,11 @@ You can use the app explicit render support also is you implement reCaptcha in o
 </html>
 ```
 
-## "Invisible" Usage
-The implementation and the usage of this kind of binding is simpler and you don't need to use the explicit
-rendering to add multiple instances of the reCAPTCHA.
+## "Invisible"（隐藏形式）的用法
+这种绑定的实现和用法更加简单，您无需使用可视化渲染即可添加 reCAPTCHA 的多个实例。
 
-### Form and Widget
-You can simply create a reCaptcha enabled form with the field provided by this app:
+### 表单和控件
+您可以使用此应用提供的字段便捷地创建一个启用 reCaptcha 的表单：
 
 ```python
 from snowpenguin.django.recaptcha2.fields import ReCaptchaField
@@ -229,11 +238,10 @@ class ExampleForm(forms.Form):
     [...]
 ```
 
-You can set the private key on the "private_key" argument of the field contructor.
+如果您不想用 settings.py 中设置的私钥，可以在字段中添加 "private_key" 参数来指定私钥。
 
-### Templating
-You just need to add the "recaptcha_init" tag on the head of your page and to place the invisible reCAPTCHA
-submit button inside your form:
+### 模板
+您只需要在页面 head 中添加 "recaptcha_init" 标签，并将隐藏式的 reCAPTCHA 提交按钮放置在表单内：
 
 ```django
 <form id='myform1' action="?" method="POST">
@@ -243,19 +251,20 @@ submit button inside your form:
 </form>
 ```
 
-You can customize the button with the parameters included in its definition:
+您可以使用其定义中包含的参数来自定义按钮：
 
 ```python
 def recaptcha_invisible_button(public_key=None, submit_label=None, extra_css_classes=None,
                                form_id=None, custom_callback=None):
 ``` 
 
+您可以覆盖 reCAPTCHA 公钥，更改按钮的 label ，应用额外的CSS类，强制按钮提交由ID标识的表单或提供自定义函数的名称。请查看示例以了解其工作原理。
 You can override the reCAPTCHA public key, change the label of the button, apply extra css classes, force
 the button to submit a form identified by id or provide the name of a custom callback. Please check the samples
 to understand how it works.
 
-### Samples
-#### Simple usage
+### 示例
+#### 简单的示例
 
 ```django
 {% load recaptcha2 %}
@@ -273,11 +282,9 @@ to understand how it works.
 </html>
 ```
 
-**Note:** The button will looking for the first "form" element using che "Element.closest" function. IE
-doesn't support it, so please use a polyfill (for example https://polyfill.io). If you don't want to
-add extra javascript libraries, please use the form id or a custom callback.
+**注意：** 该按钮将使用 "Element.closest" 函数查找第一个 "form" 元素。IE不支持它，因此请使用 polyfill（例如：https://polyfill.io ）。如果您不想添加额外的 JavaScript 库，请使用表单ID或自定义函数。
 
-#### Form id
+#### 表单 id
 
 ```django
 {% load recaptcha2 %}
@@ -295,7 +302,7 @@ add extra javascript libraries, please use the form id or a custom callback.
 </html>
 ```
 
-#### Custom callback
+#### 自定义函数
 
 ```django
 {% load recaptcha2 %}
@@ -319,29 +326,25 @@ add extra javascript libraries, please use the form id or a custom callback.
 </html>
 ```
 
-### TODO/ISSUES
+### 待办事项
 
-- Only the automatic binding is supported, but you can add the dummy widget inside your form and the required
-javascript code in your template in order to use the programmatically bind and invoke.
+- 仅支持自动绑定，但是您可以在表单内添加虚拟小部件，并在模板中添加所需的 javascript 代码，以便以编程方式使用绑定和调用。
 
-- You can only configure one reCAPTCHA key in the configuration. This isn't a real problem because if you want 
-to use the invisible reCAPTCHA you don't need to use the "old one" anymore. If you need to use both implementations you
-can still set the public and private keys in the fields, tags and widgets constructors.
+- 您只能在配置中配置一个 reCAPTCHA 密钥。这其实不是一个问题，因为如果您要使用隐藏式的 reCAPTCHA ，则不再需要使用“旧版本”。如果需要同时使用这两种实现，则仍可以在字段、标签和部件构造函数中设置公钥和私钥。
 
-- ReCaptchaHiddenInput could be the starting point for the creation of some "I'm not a robot" reCAPTCHA template
-tags to use in place of the ReCaptchaWidget (maybe in a future release)
+- ReCaptchaHiddenInput 可能是创建一些 "I'm not a robot" reCAPTCHA 模板标签以代替 ReCaptchaWidget 的起点（可能在将来的版本中）
 
-## Testing
+## 测试
 ### Test unit support
-You can't simulate api calls in your test, but you can disable the recaptcha field and let your test works.
+您无法在测试中模拟 api 调用，但是可以禁用 recaptcha 字段来进行测试工作。
 
-Just set the RECAPTCHA_DISABLE env variable in your test:
+只需在测试中设置 RECAPTCHA_DISABLE env 变量即可：
 
 ```python
 os.environ['RECAPTCHA_DISABLE'] = 'True'
 ```
 
-Warning: you can use any word in place of "True", the clean function will check only if the variable exists.
+警告：您可以使用任何单词代替 "True" ，clean 函数将仅检查变量是否存在。
 
 ### Test unit with recaptcha2 disabled
 ```python
